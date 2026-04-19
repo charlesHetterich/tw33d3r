@@ -1,0 +1,80 @@
+{
+  "targets": {
+    "acc2c3b5e912b762": {
+      "asset-hub": "wss://asset-hub-paseo-rpc.n.dwellir.com",
+      "bulletin": "https://paseo-ipfs.polkadot.io/ipfs"
+    }
+  },
+  "dependencies": {
+    "acc2c3b5e912b762": {
+      "@example/tw33d3r-posts": "latest",
+      "@polkadot/contexts": "latest"
+    }
+  },
+  "contracts": {
+    "acc2c3b5e912b762": {
+      "@polkadot/contexts": {
+        "version": 0,
+        "address": "0xd5cd57C77A03de66133acC0C68BFf01D93625059",
+        "abi": [
+          {
+            "type": "constructor",
+            "inputs": [],
+            "stateMutability": "nonpayable"
+          },
+          {
+            "type": "function",
+            "name": "registerContext",
+            "inputs": [
+              {
+                "name": "context_id",
+                "type": "bytes32"
+              }
+            ],
+            "outputs": [],
+            "stateMutability": "nonpayable"
+          },
+          {
+            "type": "function",
+            "name": "getOwner",
+            "inputs": [
+              {
+                "name": "context_id",
+                "type": "bytes32"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "",
+                "type": "address"
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "isOwner",
+            "inputs": [
+              {
+                "name": "context_id",
+                "type": "bytes32"
+              },
+              {
+                "name": "address",
+                "type": "address"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "",
+                "type": "bool"
+              }
+            ],
+            "stateMutability": "view"
+          }
+        ],
+        "metadataCid": "bafk2bzacedw3s2xeicuq5s6zvntl3s76rjycercmep6antfkwwi5begotqxeo"
+      }
+    }
+  }
+}

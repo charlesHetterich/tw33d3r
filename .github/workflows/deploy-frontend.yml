@@ -1,0 +1,205 @@
+name: Deploy Frontend
+
+on:
+    push:
+        branches:
+            - main
+    pull_request:
+        branches:
+            - main
+    workflow_dispatch:
+
+permissions:
+    contents: read
+    pull-requests: write
+
+concurrency:
+    group: deploy-frontend-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        name: Build
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+
+            - name: Install and build
+              run: pnpm install && pnpm build
+
+            - name: Upload build artifact
+              uses: actions/upload-artifact@v4
+              with:
+                  name: frontend-build
+                  path: dist
+                  retention-days: 1
+
+    comment-deploying:
+        needs: build
+        if: github.event_name == 'pull_request'
+        runs-on: ubuntu-latest
+        name: Comment Deploying
+        steps:
+            - name: Comment deployment in progress
+              uses: marocchino/sticky-pull-request-comment@v2
+              with:
+                  header: deploy-preview
+                  message: |
+                      ## Preview Deployment
+
+                      | App | Status |
+                      |:---:|:------:|
+                      | Frontend | Deploying... |
+
+                      <sub>Deployment in progress. This comment will update when ready. [View workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})</sub>
+
+    deploy:
+        needs: build
+        runs-on: ubuntu-latest
+        name: Deploy
+        outputs:
+            domain: ${{ steps.deploy.outputs.domain }}
+            cid: ${{ steps.deploy.outputs.cid }}
+            url: ${{ steps.domain.outputs.url }}
+        steps:
+            - name: Download build artifact
+              uses: actions/download-artifact@v4
+              with:
+                  name: frontend-build
+                  path: dist
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+
+            - name: Setup IPFS
+              run: |
+                  curl -fsSL -o kubo.tar.gz https://github.com/ipfs/kubo/releases/download/v0.32.1/kubo_v0.32.1_linux-amd64.tar.gz
+                  tar xzf kubo.tar.gz
+                  sudo mv kubo/ipfs /usr/local/bin/
+                  rm -rf kubo kubo.tar.gz
+                  ipfs init
+
+            - name: Install bulletin-deploy
+              run: npm install -g bulletin-deploy
+
+            - name: Determine domain
+              id: domain
+              run: |
+                  if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+                    DOMAIN="playgroundtest-pr-${{ github.event.pull_request.number }}.dot"
+                    echo "url=https://playgroundtest-pr-${{ github.event.pull_request.number }}.dot.li" >> "$GITHUB_OUTPUT"
+                  else
+                    DOMAIN="playgroundtest.dot"
+                    echo "url=https://playgroundtest.dot.li" >> "$GITHUB_OUTPUT"
+                  fi
+                  echo "domain=$DOMAIN" >> "$GITHUB_OUTPUT"
+
+            - name: Deploy to Bulletin
+              id: deploy
+              uses: nick-fields/retry@v3
+              with:
+                  timeout_minutes: 15
+                  max_attempts: 3
+                  retry_wait_seconds: 30
+                  command: bulletin-deploy './dist' '${{ steps.domain.outputs.domain }}'
+              env:
+                  MNEMONIC: ${{ secrets.MNEMONIC }}
+                  DOTNS_STATUS: full
+                  NODE_OPTIONS: "--max-old-space-size=8192"
+
+    publish-metadata:
+        needs: [build, deploy]
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        runs-on: ubuntu-latest
+        name: Publish Metadata
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Setup pnpm
+              uses: pnpm/action-setup@v4
+
+            - name: Setup Node.js
+              uses: actions/setup-node@v4
+              with:
+                  node-version: "22"
+
+            - name: Install dependencies
+              run: pnpm install
+
+            - name: Publish metadata to registry
+              uses: nick-fields/retry@v3
+              with:
+                  timeout_minutes: 10
+                  max_attempts: 3
+                  retry_wait_seconds: 30
+                  command: pnpm tsx scripts/publish-metadata.ts playgroundtest.dot
+              env:
+                  MNEMONIC: ${{ secrets.MNEMONIC }}
+                  NODE_OPTIONS: "--max-old-space-size=8192"
+
+    comment-success:
+        needs: [build, deploy]
+        if: github.event_name == 'pull_request' && success()
+        runs-on: ubuntu-latest
+        name: Comment Success
+        steps:
+            - name: Comment on PR
+              uses: marocchino/sticky-pull-request-comment@v2
+              with:
+                  header: deploy-preview
+                  message: |
+                      ## Preview Deployment Ready!
+
+                      | App | Status | Preview |
+                      |:---:|:------:|:-------:|
+                      | **Frontend** | Ready | [**Visit Preview**](${{ needs.deploy.outputs.url }}) |
+
+                      <details>
+                      <summary>Deployment Details</summary>
+
+                      | Detail | Value |
+                      |--------|-------|
+                      | **Domain** | `${{ needs.deploy.outputs.domain }}` |
+                      | **CID** | `${{ needs.deploy.outputs.cid }}` |
+                      | **Commit** | [`${{ github.event.pull_request.head.sha }}`](${{ github.event.pull_request.head.repo.html_url }}/commit/${{ github.event.pull_request.head.sha }}) |
+                      | **Branch** | `${{ github.head_ref }}` |
+
+                      </details>
+
+                      ---
+                      <sub>This preview updates automatically on each push to this PR. [View workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})</sub>
+
+    comment-failure:
+        needs: [build, deploy]
+        if: github.event_name == 'pull_request' && failure()
+        runs-on: ubuntu-latest
+        name: Comment Failure
+        steps:
+            - name: Comment on PR
+              uses: marocchino/sticky-pull-request-comment@v2
+              with:
+                  header: deploy-preview
+                  message: |
+                      ## Preview Deployment Failed
+
+                      | Stage | Status |
+                      |:------|:------:|
+                      | **Build** | ${{ needs.build.result == 'success' && 'Built' || needs.build.result == 'skipped' && 'Skipped' || 'Failed' }} |
+                      | **Deploy** | ${{ needs.deploy.result == 'success' && 'Deployed' || needs.deploy.result == 'skipped' && 'Skipped' || 'Failed' }} |
+
+                      [**View workflow run**](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+                      ---
+                      <sub>Fix any issues and push again to retry.</sub>

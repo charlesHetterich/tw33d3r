@@ -1,0 +1,21 @@
+[package]
+name = "tw33d3r-posts"
+version.workspace = true
+edition.workspace = true
+description = "Post registry contract - stores and indexes tweets for the tw33d3r app"
+authors.workspace = true
+
+[dependencies]
+cdm.workspace = true
+common.workspace = true
+pvm_contract.workspace = true
+polkavm-derive.workspace = true
+parity-scale-codec.workspace = true
+picoalloc.workspace = true
+
+[lib]
+path = "lib.rs"
+
+[[bin]]
+name = "tw33d3r-posts"
+path = "lib.rs"

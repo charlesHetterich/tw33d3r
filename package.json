@@ -1,0 +1,40 @@
+{
+  "name": "tw33d3r",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.17.1",
+  "playground:description": "A minimal Twitter-like feed on Polkadot. Posts are indexed on-chain, content lives on Bulletin.",
+  "playground:tag": "social",
+  "playground:icon": "./assets/icon.png",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "tsc -b && vite build",
+    "build:contracts": "cdm build",
+    "deploy": "cdm deploy -n paseo",
+    "preview": "vite preview",
+    "deploy:frontend": "MNEMONIC=$(node -e \"process.stdout.write(require(require('os').homedir()+'/.cdm/accounts.json').paseo.mnemonic)\") DOTNS_STATUS=full npx bulletin-deploy ./dist tw33d3r.dot --playground"
+  },
+  "dependencies": {
+    "@novasamatech/host-api": "^0.6.15",
+    "@novasamatech/product-sdk": "^0.6.15",
+    "@polkadot-apps/address": "latest",
+    "@polkadot-apps/bulletin": "latest",
+    "@polkadot-apps/chain-client": "latest",
+    "@polkadot-apps/contracts": "latest",
+    "@polkadot-apps/keys": "latest",
+    "@polkadot-apps/signer": "latest",
+    "@polkadot-apps/utils": "^0.3.0",
+    "polkadot-api": "^1.23.3",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.7.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.2"
+  }
+}
