@@ -74,6 +74,199 @@
           }
         ],
         "metadataCid": "bafk2bzacedw3s2xeicuq5s6zvntl3s76rjycercmep6antfkwwi5begotqxeo"
+      },
+      "@example/tw33d3r-posts": {
+        "version": 0,
+        "address": "0xE810F7d82eC86b147b7d59C17F8644588b7ac974",
+        "abi": [
+          {
+            "type": "constructor",
+            "inputs": [],
+            "stateMutability": "nonpayable"
+          },
+          {
+            "type": "function",
+            "name": "post",
+            "inputs": [
+              {
+                "name": "content_uri",
+                "type": "string"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "",
+                "type": "bytes32"
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "deletePost",
+            "inputs": [
+              {
+                "name": "post_id",
+                "type": "bytes32"
+              }
+            ],
+            "outputs": [],
+            "stateMutability": "nonpayable"
+          },
+          {
+            "type": "function",
+            "name": "getContextId",
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "",
+                "type": "bytes32"
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "getPostCount",
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "",
+                "type": "uint32"
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "getPostAt",
+            "inputs": [
+              {
+                "name": "index",
+                "type": "uint32"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "",
+                "type": "tuple",
+                "components": [
+                  {
+                    "name": "isSome",
+                    "type": "bool"
+                  },
+                  {
+                    "name": "value",
+                    "type": "bytes32"
+                  }
+                ]
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "getAuthorPostCount",
+            "inputs": [
+              {
+                "name": "author",
+                "type": "address"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "",
+                "type": "uint32"
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "getAuthorPostAt",
+            "inputs": [
+              {
+                "name": "author",
+                "type": "address"
+              },
+              {
+                "name": "index",
+                "type": "uint32"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "",
+                "type": "tuple",
+                "components": [
+                  {
+                    "name": "isSome",
+                    "type": "bool"
+                  },
+                  {
+                    "name": "value",
+                    "type": "bytes32"
+                  }
+                ]
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "getPost",
+            "inputs": [
+              {
+                "name": "post_id",
+                "type": "bytes32"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "",
+                "type": "tuple",
+                "components": [
+                  {
+                    "name": "isSome",
+                    "type": "bool"
+                  },
+                  {
+                    "name": "value",
+                    "type": "tuple",
+                    "components": [
+                      {
+                        "name": "author",
+                        "type": "address"
+                      },
+                      {
+                        "name": "content_uri",
+                        "type": "string"
+                      },
+                      {
+                        "name": "timestamp",
+                        "type": "uint64"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "getSudo",
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "",
+                "type": "address"
+              }
+            ],
+            "stateMutability": "view"
+          }
+        ],
+        "metadataCid": "bafk2bzaceabvnk72nzxo4zopt2j6ijhfpoxfma3wpmwvj7ea4q5h7ysknhk2s"
       }
     }
   }

@@ -24,7 +24,7 @@
     "@polkadot-apps/contracts": "latest",
     "@polkadot-apps/keys": "latest",
     "@polkadot-apps/signer": "latest",
-    "@polkadot-apps/utils": "^0.3.0",
+    "@polkadot-apps/utils": "latest",
     "polkadot-api": "^1.23.3",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"

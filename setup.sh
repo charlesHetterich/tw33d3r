@@ -1,0 +1,2 @@
+pnpm i
+cdm i
