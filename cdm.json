@@ -76,8 +76,8 @@
         "metadataCid": "bafk2bzacedw3s2xeicuq5s6zvntl3s76rjycercmep6antfkwwi5begotqxeo"
       },
       "@example/tw33d3r-posts": {
-        "version": 0,
-        "address": "0xE810F7d82eC86b147b7d59C17F8644588b7ac974",
+        "version": 1,
+        "address": "0xE7fF48A275Cde81A21BeBff9783C66592b0175b5",
         "abi": [
           {
             "type": "constructor",
@@ -166,6 +166,59 @@
           },
           {
             "type": "function",
+            "name": "getPostsPage",
+            "inputs": [
+              {
+                "name": "offset",
+                "type": "uint32"
+              },
+              {
+                "name": "limit",
+                "type": "uint32"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "",
+                "type": "tuple",
+                "components": [
+                  {
+                    "name": "posts",
+                    "type": "tuple[]",
+                    "components": [
+                      {
+                        "name": "post_id",
+                        "type": "bytes32"
+                      },
+                      {
+                        "name": "author",
+                        "type": "address"
+                      },
+                      {
+                        "name": "content_uri",
+                        "type": "string"
+                      },
+                      {
+                        "name": "timestamp",
+                        "type": "uint64"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "next_offset",
+                    "type": "uint32"
+                  },
+                  {
+                    "name": "done",
+                    "type": "bool"
+                  }
+                ]
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
             "name": "getAuthorPostCount",
             "inputs": [
               {
@@ -214,6 +267,63 @@
           },
           {
             "type": "function",
+            "name": "getAuthorPostsPage",
+            "inputs": [
+              {
+                "name": "author",
+                "type": "address"
+              },
+              {
+                "name": "offset",
+                "type": "uint32"
+              },
+              {
+                "name": "limit",
+                "type": "uint32"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "",
+                "type": "tuple",
+                "components": [
+                  {
+                    "name": "posts",
+                    "type": "tuple[]",
+                    "components": [
+                      {
+                        "name": "post_id",
+                        "type": "bytes32"
+                      },
+                      {
+                        "name": "author",
+                        "type": "address"
+                      },
+                      {
+                        "name": "content_uri",
+                        "type": "string"
+                      },
+                      {
+                        "name": "timestamp",
+                        "type": "uint64"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "next_offset",
+                    "type": "uint32"
+                  },
+                  {
+                    "name": "done",
+                    "type": "bool"
+                  }
+                ]
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
             "name": "getPost",
             "inputs": [
               {
@@ -234,6 +344,10 @@
                     "name": "value",
                     "type": "tuple",
                     "components": [
+                      {
+                        "name": "post_id",
+                        "type": "bytes32"
+                      },
                       {
                         "name": "author",
                         "type": "address"
@@ -266,7 +380,7 @@
             "stateMutability": "view"
           }
         ],
-        "metadataCid": "bafk2bzaceabvnk72nzxo4zopt2j6ijhfpoxfma3wpmwvj7ea4q5h7ysknhk2s"
+        "metadataCid": "bafk2bzaceblsqbi4qgddkfud2s5th5nte524iabzaft4wpr75uux55xest6lc"
       }
     }
   }

@@ -1,7 +1,12 @@
 import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import type { SignerState } from "@polkadot-apps/signer";
-import { computeCid } from "@polkadot-apps/bulletin";
-import { MAX_LEN, getBulletinClient, postsReady } from "../../chain";
+import {
+  BulletinUploadError,
+  MAX_LEN,
+  computeCid,
+  publishPost,
+  uploadBytes,
+} from "../../chain";
 import type { PostContent } from "../../types";
 import { Avatar } from "./Avatar";
 
@@ -35,28 +40,23 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
     if (!trimmed || status === "posting") return;
 
     setStatus("posting");
-    setStatusMsg("Preparing…");
     try {
       const content: PostContent = { text: trimmed };
       const bytes = new TextEncoder().encode(JSON.stringify(content));
       const cid = computeCid(bytes);
 
-      setStatusMsg("Uploading & posting…");
-      const contract = await postsReady;
+      // Serialize, don't parallelize. Parallel caused "Invalid/Stale" + a
+      // dangling "Transport is disposed" on the second post: both txs raced
+      // on the account's nonce, one lost, and the other's transport was
+      // already torn down by then. Upload first (fast, host preimage), then
+      // submit the on-chain post — if the user cancels the mobile sign, the
+      // bulletin entry is orphaned but nothing is broken on-chain.
+      setStatusMsg("Uploading to Bulletin…");
+      await uploadBytes(bytes, "post");
 
-      const bulletinPromise = (async () => {
-        const client = await getBulletinClient();
-        await client.batchUpload([{ data: bytes, label: "post" }], undefined);
-      })();
-
-      const postPromise = (async () => {
-        const result = await contract.post.tx(cid);
-        if (!result.ok) throw new Error("Post transaction failed");
-      })();
-
-      const results = await Promise.allSettled([bulletinPromise, postPromise]);
-      const failures = results.filter(r => r.status === "rejected") as PromiseRejectedResult[];
-      if (failures.length) throw failures[0].reason;
+      setStatusMsg("Waiting for signature…");
+      const res = await publishPost(cid);
+      if (!res.ok) throw new Error("Post transaction rejected");
 
       setText("");
       setStatus("idle");
@@ -64,7 +64,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
       onPosted();
     } catch (err: unknown) {
       setStatus("error");
-      setStatusMsg(err instanceof Error ? err.message : "Something went wrong");
+      setStatusMsg(friendlyError(err));
     }
   };
 
@@ -105,3 +105,11 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
     </div>
   );
 });
+
+function friendlyError(err: unknown): string {
+  if (err instanceof BulletinUploadError) {
+    return `${err.message}. Make sure your account is authorized on Bulletin.`;
+  }
+  if (err instanceof Error) return err.message;
+  try { return JSON.stringify(err); } catch { return "Something went wrong"; }
+}

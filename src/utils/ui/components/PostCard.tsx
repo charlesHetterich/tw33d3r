@@ -2,19 +2,49 @@ import { truncateAddress } from "@polkadot-apps/address";
 import type { PostEntry } from "../../types";
 import { formatTime } from "../../time";
 import { Avatar } from "./Avatar";
-import { ReplyIcon, RepostIcon, LikeIcon, ShareIcon } from "./Icons";
+import { LikeIcon, ReplyIcon, RepostIcon, ShareIcon } from "./Icons";
 
-export function PostCard({ entry }: { entry: PostEntry }) {
+interface PostCardProps {
+  entry: PostEntry;
+  onAuthorClick?: (address: string) => void;
+}
+
+export function PostCard({ entry, onAuthorClick }: PostCardProps) {
   const handle = shortHandle(entry.author);
   const display = truncateAddress(entry.author);
 
+  const openAuthor = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onAuthorClick?.(entry.author);
+  };
+
   return (
     <article className="post">
-      <Avatar address={entry.author} />
+      <button
+        className="post-avatar-btn"
+        onClick={openAuthor}
+        type="button"
+        aria-label="Open profile"
+      >
+        <Avatar address={entry.author} />
+      </button>
       <div className="post-main">
         <header className="post-header">
-          <span className="post-name" title={entry.author}>{display}</span>
-          <span className="post-handle">@{handle}</span>
+          <button
+            className="post-name post-link"
+            type="button"
+            title={entry.author}
+            onClick={openAuthor}
+          >
+            {display}
+          </button>
+          <button
+            className="post-handle post-link"
+            type="button"
+            onClick={openAuthor}
+          >
+            @{handle}
+          </button>
           <span className="post-sep">·</span>
           <time className="post-time">{formatTime(entry.timestamp)}</time>
         </header>
@@ -54,6 +84,5 @@ function ActionButton({
 }
 
 function shortHandle(address: string): string {
-  // h160 addresses don't have handles — use last 6 hex chars as a pseudo-handle
   return address.replace(/^0x/i, "").slice(-6).toLowerCase();
 }

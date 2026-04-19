@@ -1,18 +1,20 @@
 import type { ReactNode } from "react";
 import type { SignerState } from "@polkadot-apps/signer";
 import { truncateAddress } from "@polkadot-apps/address";
-import type { Tab } from "../../types";
+import type { Tab, View } from "../../types";
 import { Avatar } from "./Avatar";
-import { HomeIcon, UserIcon, LogoIcon, MoreIcon } from "./Icons";
+import { HomeIcon, LogoIcon, MoreIcon, UserIcon } from "./Icons";
 
 interface SidebarProps {
-  tab: Tab;
-  onTabChange: (t: Tab) => void;
+  view: View;
+  onNavigate: (view: View) => void;
   account?: SignerState["selectedAccount"];
   onComposeClick: () => void;
 }
 
-export function Sidebar({ tab, onTabChange, account, onComposeClick }: SidebarProps) {
+export function Sidebar({ view, onNavigate, account, onComposeClick }: SidebarProps) {
+  const active: Tab = view.kind;
+
   return (
     <aside className="sidebar">
       <div className="sidebar-inner">
@@ -22,16 +24,16 @@ export function Sidebar({ tab, onTabChange, account, onComposeClick }: SidebarPr
 
         <nav className="sidebar-nav">
           <NavItem
-            icon={<HomeIcon filled={tab === "feed"} />}
+            icon={<HomeIcon filled={active === "feed"} />}
             label="Home"
-            active={tab === "feed"}
-            onClick={() => onTabChange("feed")}
+            active={active === "feed"}
+            onClick={() => onNavigate({ kind: "feed" })}
           />
           <NavItem
-            icon={<UserIcon filled={tab === "mine"} />}
+            icon={<UserIcon filled={active === "mine" || active === "profile"} />}
             label="My Posts"
-            active={tab === "mine"}
-            onClick={() => onTabChange("mine")}
+            active={active === "mine"}
+            onClick={() => onNavigate({ kind: "mine" })}
           />
         </nav>
 
@@ -44,7 +46,12 @@ export function Sidebar({ tab, onTabChange, account, onComposeClick }: SidebarPr
           Post
         </button>
 
-        {account && <AccountPill account={account} />}
+        {account && (
+          <AccountPill
+            account={account}
+            onClick={() => onNavigate({ kind: "profile", address: account.h160Address })}
+          />
+        )}
       </div>
     </aside>
   );
@@ -73,14 +80,25 @@ function NavItem({
   );
 }
 
-function AccountPill({ account }: { account: NonNullable<SignerState["selectedAccount"]> }) {
+function AccountPill({
+  account,
+  onClick,
+}: {
+  account: NonNullable<SignerState["selectedAccount"]>;
+  onClick?: () => void;
+}) {
   const name = account.name ?? "Anonymous";
   const handle = account.address
     ? truncateAddress(account.address)
     : truncateAddress(account.h160Address);
 
   return (
-    <div className="account-pill" title={account.address}>
+    <button
+      className="account-pill"
+      title={account.address}
+      onClick={onClick}
+      type="button"
+    >
       <Avatar address={account.h160Address} size={40} />
       <div className="account-pill-text">
         <span className="account-pill-name">{name}</span>
@@ -89,6 +107,6 @@ function AccountPill({ account }: { account: NonNullable<SignerState["selectedAc
       <span className="account-pill-more" aria-hidden="true">
         <MoreIcon />
       </span>
-    </div>
+    </button>
   );
 }

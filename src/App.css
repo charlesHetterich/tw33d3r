@@ -637,6 +637,63 @@ textarea {
 }
 
 /* ──────────────────────────────────────────────────────────── */
+/*  Profile view                                                 */
+/* ──────────────────────────────────────────────────────────── */
+
+.profile-header {
+  display: flex;
+  gap: 16px;
+  padding: 20px 16px 16px;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+}
+
+.profile-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.profile-name {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.profile-handle {
+  font-size: 15px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ──────────────────────────────────────────────────────────── */
+/*  Clickable post bits (author, avatar)                         */
+/* ──────────────────────────────────────────────────────────── */
+
+.post-avatar-btn {
+  padding: 0;
+  border-radius: var(--r-full);
+  flex-shrink: 0;
+  transition: opacity 120ms;
+}
+.post-avatar-btn:hover { opacity: 0.85; }
+
+.post-link {
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+.post-link.post-name:hover { text-decoration: underline; }
+.post-link.post-handle:hover { text-decoration: underline; }
+
+/* ──────────────────────────────────────────────────────────── */
 /*  Scrollbar                                                    */
 /* ──────────────────────────────────────────────────────────── */
 

@@ -1,29 +1,48 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { PAGE, fetchJson, gateway, getPostsPage, toHex } from "../../chain";
+import {
+  PAGE,
+  fetchJson,
+  gateway,
+  getAuthorPostsPage,
+  toHex,
+} from "../../chain";
 import type { PostContent, PostEntry } from "../../types";
 import { useIntersectionObserver } from "../hooks";
 import { PostCard } from "./PostCard";
 
-interface FeedProps {
-  refreshKey: number;
+interface AuthorFeedProps {
+  address: string;
+  refreshKey?: number;
+  emptyTitle?: string;
+  emptyBody?: string;
   onAuthorClick?: (address: string) => void;
 }
 
-export function Feed({ refreshKey, onAuthorClick }: FeedProps) {
+/**
+ * Generic "timeline for one address" — powers both the MyPosts tab and the
+ * Profile view. Paginated via `getAuthorPostsPage`. The caller decides the
+ * empty-state copy and whether author clicks should navigate.
+ */
+export function AuthorFeed({
+  address,
+  refreshKey = 0,
+  emptyTitle = "No posts yet.",
+  emptyBody = "When they post something, it'll show up here.",
+  onAuthorClick,
+}: AuthorFeedProps) {
   const [entries, setEntries] = useState<PostEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
 
   const offsetRef = useRef(0);
   const busyRef = useRef(false);
-  const refreshRef = useRef(refreshKey);
 
   const loadMore = useCallback(async () => {
     if (busyRef.current || done) return;
     busyRef.current = true;
     setLoading(true);
     try {
-      const res = await getPostsPage(offsetRef.current, PAGE);
+      const res = await getAuthorPostsPage(address, offsetRef.current, PAGE);
       if (!res.success) {
         setDone(true);
         return;
@@ -42,7 +61,6 @@ export function Feed({ refreshKey, onAuthorClick }: FeedProps) {
       setEntries(prev => [...prev, ...batch]);
       setDone(Boolean(isDone));
 
-      // Back-fill Bulletin content async — cards render immediately with a loading stub
       for (const entry of batch) {
         fetchJson<PostContent>(entry.contentUri, gateway)
           .then(content =>
@@ -53,29 +71,34 @@ export function Feed({ refreshKey, onAuthorClick }: FeedProps) {
           .catch(() => {});
       }
     } catch (err) {
-      console.error("Feed load error:", err);
+      console.error("AuthorFeed load error:", err);
       setDone(true);
     } finally {
       busyRef.current = false;
       setLoading(false);
     }
-  }, [done]);
+  }, [address, done]);
 
-  // Reset on refreshKey bump (e.g. after a new post).
+  // Reset whenever the target address or refresh key changes.
   useEffect(() => {
-    const isFirst = refreshRef.current === refreshKey && entries.length === 0;
-    if (!isFirst) {
-      refreshRef.current = refreshKey;
-      offsetRef.current = 0;
-      busyRef.current = false;
-      setEntries([]);
-      setDone(false);
-    }
+    offsetRef.current = 0;
+    busyRef.current = false;
+    setEntries([]);
+    setDone(false);
     void loadMore();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshKey]);
+  }, [address, refreshKey]);
 
   const sentinelRef = useIntersectionObserver(loadMore, !done && !loading);
+
+  if (done && entries.length === 0 && !loading) {
+    return (
+      <div className="feed-empty">
+        <h3>{emptyTitle}</h3>
+        <p>{emptyBody}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="feed">
@@ -83,12 +106,6 @@ export function Feed({ refreshKey, onAuthorClick }: FeedProps) {
         <PostCard key={entry.postIdHex} entry={entry} onAuthorClick={onAuthorClick} />
       ))}
       {loading && <div className="feed-spinner">Loading…</div>}
-      {done && entries.length === 0 && !loading && (
-        <div className="feed-empty">
-          <h3>Nothing here yet.</h3>
-          <p>Be the first to post.</p>
-        </div>
-      )}
       {!done && <div ref={sentinelRef} className="sentinel" />}
     </div>
   );

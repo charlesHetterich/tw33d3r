@@ -1,6 +1,11 @@
 #![no_main]
 #![no_std]
 
+// Note: don't `use alloc::vec::Vec;` at outer scope — the `#[pvm::contract]`
+// macro below emits one itself for the generated dispatch code around the
+// module, and the two imports collide (E0252). `PostPage`'s field uses the
+// fully-qualified `alloc::vec::Vec<Post>` so the outer scope doesn't need
+// the import, and the module below imports Vec locally for its own use.
 use alloc::string::String;
 use common::{generate_id, revert, ContextId, EntityId};
 use parity_scale_codec::{Decode, Encode};
@@ -10,6 +15,8 @@ use pvm_contract as pvm;
 
 cdm::import!("@polkadot/contexts");
 
+const MAX_PAGE_LIMIT: u32 = 100;
+
 /// On-chain post record (SCALE-encoded in storage).
 #[derive(Default, Clone, Encode, Decode)]
 pub struct PostData {
@@ -18,12 +25,25 @@ pub struct PostData {
     pub timestamp: u64,
 }
 
-/// ABI-facing view of a post (Solidity-encoded in returns).
+/// ABI-facing view of a post (Solidity-encoded in returns). Carries its own
+/// id so a single call can fully describe a post for the client.
 #[derive(Default, pvm::SolAbi)]
 pub struct Post {
+    pub post_id: EntityId,
     pub author: Address,
     pub content_uri: String,
     pub timestamp: u64,
+}
+
+/// Paginated response. `next_offset` is the offset to pass on the next
+/// call to continue where this page left off — works correctly even if
+/// slots were deleted (they get skipped but still advance the cursor).
+/// `done` flips true when the cursor has walked off the end of the index.
+#[derive(Default, pvm::SolAbi)]
+pub struct PostPage {
+    pub posts: alloc::vec::Vec<Post>,
+    pub next_offset: u32,
+    pub done: bool,
 }
 
 #[pvm::storage]
@@ -35,7 +55,7 @@ struct Storage {
     post_count: u32,
     post_at: Mapping<u32, EntityId>,
 
-    // --- Per-author index (My Posts) ---
+    // --- Per-author index ---
     author_post_count: Mapping<[u8; 20], u32>,
     author_post_at: Mapping<([u8; 20], u32), EntityId>,
 
@@ -46,9 +66,24 @@ struct Storage {
     sudo: Address,
 }
 
+/// Build a `Post` from an id and its stored record. Cheap enough to inline,
+/// called from every page-getter once per post.
+fn post_from(post_id: EntityId, data: PostData) -> Post {
+    Post {
+        post_id,
+        author: data.author,
+        content_uri: data.content_uri,
+        timestamp: data.timestamp,
+    }
+}
+
 #[pvm::contract(cdm = "@example/tw33d3r-posts")]
 mod tw33d3r_posts {
-    use super::*;
+    use super::{
+        caller, contexts, generate_id, post_from, pvm, revert, Address, ContextId, EntityId,
+        Post, PostData, PostPage, Storage, String, MAX_PAGE_LIMIT,
+    };
+    use alloc::vec::Vec;
 
     #[pvm::constructor]
     pub fn new() -> Result<(), Error> {
@@ -104,7 +139,7 @@ mod tw33d3r_posts {
     }
 
     /// Delete a post. Caller must be the author or the sudo admin.
-    /// Index slots are left in place; `get_post` for a deleted id returns None.
+    /// Index slots are left in place; a deleted post is skipped by page getters.
     #[pvm::method]
     pub fn delete_post(post_id: EntityId) {
         let data = match Storage::info().get(&post_id) {
@@ -140,7 +175,43 @@ mod tw33d3r_posts {
         Storage::post_at().get(&index)
     }
 
-    // --- Per-author queries (My Posts) ---
+    /// Batch-fetch a page of the global feed in reverse-chronological order.
+    /// `offset` is counted from the newest post (0 = newest). `limit` is
+    /// capped at `MAX_PAGE_LIMIT`. Deleted posts are skipped, but `next_offset`
+    /// still advances over them so the client never loops.
+    #[pvm::method]
+    pub fn get_posts_page(offset: u32, limit: u32) -> PostPage {
+        let total = Storage::post_count().get().unwrap_or(0);
+        let cap = if limit > MAX_PAGE_LIMIT { MAX_PAGE_LIMIT } else { limit };
+
+        if offset >= total || cap == 0 {
+            return PostPage {
+                posts: Vec::new(),
+                next_offset: total,
+                done: true,
+            };
+        }
+
+        let mut posts: Vec<Post> = Vec::with_capacity(cap as usize);
+        let mut scanned: u32 = 0;
+
+        while posts.len() < cap as usize && offset + scanned < total {
+            let idx = total - 1 - offset - scanned;
+            scanned += 1;
+
+            if let Some(post_id) = Storage::post_at().get(&idx) {
+                if let Some(data) = Storage::info().get(&post_id) {
+                    posts.push(post_from(post_id, data));
+                }
+            }
+        }
+
+        let next_offset = offset + scanned;
+        let done = next_offset >= total;
+        PostPage { posts, next_offset, done }
+    }
+
+    // --- Per-author queries ---
 
     #[pvm::method]
     pub fn get_author_post_count(author: Address) -> u32 {
@@ -154,15 +225,46 @@ mod tw33d3r_posts {
         Storage::author_post_at().get(&(*author.as_fixed_bytes(), index))
     }
 
+    /// Batch-fetch a page of `author`'s posts in reverse-chronological order.
+    /// Same semantics as `get_posts_page` but scoped to a single author.
+    #[pvm::method]
+    pub fn get_author_posts_page(author: Address, offset: u32, limit: u32) -> PostPage {
+        let author_bytes = *author.as_fixed_bytes();
+        let total = Storage::author_post_count().get(&author_bytes).unwrap_or(0);
+        let cap = if limit > MAX_PAGE_LIMIT { MAX_PAGE_LIMIT } else { limit };
+
+        if offset >= total || cap == 0 {
+            return PostPage {
+                posts: Vec::new(),
+                next_offset: total,
+                done: true,
+            };
+        }
+
+        let mut posts: Vec<Post> = Vec::with_capacity(cap as usize);
+        let mut scanned: u32 = 0;
+
+        while posts.len() < cap as usize && offset + scanned < total {
+            let idx = total - 1 - offset - scanned;
+            scanned += 1;
+
+            if let Some(post_id) = Storage::author_post_at().get(&(author_bytes, idx)) {
+                if let Some(data) = Storage::info().get(&post_id) {
+                    posts.push(post_from(post_id, data));
+                }
+            }
+        }
+
+        let next_offset = offset + scanned;
+        let done = next_offset >= total;
+        PostPage { posts, next_offset, done }
+    }
+
     // --- Post data queries ---
 
     #[pvm::method]
     pub fn get_post(post_id: EntityId) -> Option<Post> {
-        Storage::info().get(&post_id).map(|p| Post {
-            author: p.author,
-            content_uri: p.content_uri,
-            timestamp: p.timestamp,
-        })
+        Storage::info().get(&post_id).map(|p| post_from(post_id, p))
     }
 
     // --- Admin queries ---
