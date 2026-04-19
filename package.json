@@ -25,6 +25,7 @@
     "@polkadot-apps/keys": "latest",
     "@polkadot-apps/signer": "latest",
     "@polkadot-apps/utils": "latest",
+    "@tanstack/react-query": "^5.99.2",
     "polkadot-api": "^1.23.3",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"

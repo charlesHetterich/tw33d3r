@@ -1,5 +1,6 @@
 import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import type { SignerState } from "@polkadot-apps/signer";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   BulletinUploadError,
   MAX_LEN,
@@ -16,17 +17,17 @@ export interface ComposerHandle {
 
 interface ComposerProps {
   account: NonNullable<SignerState["selectedAccount"]>;
-  onPosted: () => void;
 }
 
 export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Composer(
-  { account, onPosted },
+  { account },
   ref,
 ) {
   const [text, setText] = useState("");
   const [status, setStatus] = useState<"idle" | "posting" | "error">("idle");
   const [statusMsg, setStatusMsg] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const queryClient = useQueryClient();
 
   useImperativeHandle(ref, () => ({
     focus: () => {
@@ -45,12 +46,8 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
       const bytes = new TextEncoder().encode(JSON.stringify(content));
       const cid = computeCid(bytes);
 
-      // Serialize, don't parallelize. Parallel caused "Invalid/Stale" + a
-      // dangling "Transport is disposed" on the second post: both txs raced
-      // on the account's nonce, one lost, and the other's transport was
-      // already torn down by then. Upload first (fast, host preimage), then
-      // submit the on-chain post — if the user cancels the mobile sign, the
-      // bulletin entry is orphaned but nothing is broken on-chain.
+      // Serialize: upload then on-chain tx. Parallel caused nonce races
+      // ("Invalid/Stale" + "Transport is disposed" on the second post).
       setStatusMsg("Uploading to Bulletin…");
       await uploadBytes(bytes, "post");
 
@@ -61,7 +58,11 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
       setText("");
       setStatus("idle");
       setStatusMsg("");
-      onPosted();
+      // Invalidate any open post feeds — the global feed *and* the author's
+      // own timeline. React-query refetches only the queries that are
+      // actively observed, so this is cheap even when many feed queries
+      // exist in the cache.
+      queryClient.invalidateQueries({ queryKey: ["posts"] });
     } catch (err: unknown) {
       setStatus("error");
       setStatusMsg(friendlyError(err));

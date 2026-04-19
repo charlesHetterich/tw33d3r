@@ -1,57 +1,68 @@
 import { truncateAddress } from "@polkadot-apps/address";
-import type { PostEntry } from "../../types";
+import { useQuery } from "@tanstack/react-query";
+import { fetchJson, gateway, type Post, toHex } from "../../chain";
 import { formatTime } from "../../time";
+import type { PostContent } from "../../types";
 import { Avatar } from "./Avatar";
 import { LikeIcon, ReplyIcon, RepostIcon, ShareIcon } from "./Icons";
 
 interface PostCardProps {
-  entry: PostEntry;
+  post: Post;
   onAuthorClick?: (address: string) => void;
 }
 
-export function PostCard({ entry, onAuthorClick }: PostCardProps) {
-  const handle = shortHandle(entry.author);
-  const display = truncateAddress(entry.author);
+export function PostCard({ post, onAuthorClick }: PostCardProps) {
+  const author = String(post.author);
+  const handle = shortHandle(author);
+  const display = truncateAddress(author);
+
+  // Content is content-addressed on Bulletin, so it never changes for a
+  // given CID — cache forever. React-query also dedupes concurrent fetches
+  // of the same CID across cards, which matters when the same post shows
+  // up in both a profile view and the global feed.
+  const { data: content } = useQuery({
+    queryKey: ["bulletin-content", post.content_uri],
+    queryFn: () => fetchJson<PostContent>(post.content_uri, gateway),
+    staleTime: Infinity,
+    gcTime: Infinity,
+    retry: 2,
+  });
 
   const openAuthor = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onAuthorClick?.(entry.author);
+    onAuthorClick?.(author);
   };
 
   return (
-    <article className="post">
+    <article className="post" data-post-id={toHex(post.post_id)}>
       <button
         className="post-avatar-btn"
         onClick={openAuthor}
         type="button"
         aria-label="Open profile"
       >
-        <Avatar address={entry.author} />
+        <Avatar address={author} />
       </button>
       <div className="post-main">
         <header className="post-header">
           <button
             className="post-name post-link"
             type="button"
-            title={entry.author}
+            title={author}
             onClick={openAuthor}
           >
             {display}
           </button>
-          <button
-            className="post-handle post-link"
-            type="button"
-            onClick={openAuthor}
-          >
+          <button className="post-handle post-link" type="button" onClick={openAuthor}>
             @{handle}
           </button>
           <span className="post-sep">·</span>
-          <time className="post-time">{formatTime(entry.timestamp)}</time>
+          <time className="post-time">{formatTime(Number(post.timestamp))}</time>
         </header>
 
         <p className="post-body">
-          {entry.content
-            ? entry.content.text
+          {content
+            ? content.text
             : <span className="post-loading">Loading…</span>}
         </p>
 

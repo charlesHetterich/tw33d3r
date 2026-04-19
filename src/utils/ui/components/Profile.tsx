@@ -1,21 +1,21 @@
 import { truncateAddress } from "@polkadot-apps/address";
+import { getAuthorPostsPage } from "../../chain";
 import { Avatar } from "./Avatar";
-import { AuthorFeed } from "./AuthorFeed";
+import { PostFeed } from "./PostFeed";
 
 interface ProfileProps {
   address: string;
-  refreshKey?: number;
   onAuthorClick?: (address: string) => void;
 }
 
 /**
- * Profile view = an address's full post timeline plus a lightweight header.
- * No on-chain profile metadata yet — that's a future contract extension
- * (set_profile / get_profile). For now the header derives everything from
- * the address itself so any user can be viewed immediately.
+ * Profile view = an address's timeline plus a lightweight header. No
+ * on-chain profile metadata yet — that's a future contract extension
+ * (set_profile / get_profile). The header derives everything from the
+ * address itself so any user can be viewed immediately.
  */
-export function Profile({ address, refreshKey = 0, onAuthorClick }: ProfileProps) {
-  const handle = address.replace(/^0x/i, "").slice(-6).toLowerCase();
+export function Profile({ address, onAuthorClick }: ProfileProps) {
+  const handle = shortHandle(address);
 
   return (
     <div className="profile">
@@ -27,13 +27,17 @@ export function Profile({ address, refreshKey = 0, onAuthorClick }: ProfileProps
         </div>
       </div>
 
-      <AuthorFeed
-        address={address}
-        refreshKey={refreshKey}
+      <PostFeed
+        queryKey={["posts", "author", address]}
+        queryFn={(offset, limit) => getAuthorPostsPage(address, offset, limit)}
         emptyTitle="No posts."
         emptyBody="This account hasn't posted yet."
         onAuthorClick={onAuthorClick}
       />
     </div>
   );
+}
+
+function shortHandle(address: string): string {
+  return address.replace(/^0x/i, "").slice(-6).toLowerCase();
 }
