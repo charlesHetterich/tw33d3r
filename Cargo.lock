@@ -826,7 +826,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "tw33d3r-posts"
+name = "tw33d3r"
 version = "0.1.0"
 dependencies = [
  "cdm",

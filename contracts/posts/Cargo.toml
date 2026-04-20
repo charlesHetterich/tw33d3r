@@ -1,8 +1,8 @@
 [package]
-name = "tw33d3r-posts"
+name = "tw33d3r"
 version.workspace = true
 edition.workspace = true
-description = "Post registry contract - stores and indexes tweets for the tw33d3r app"
+description = "tw33d3r application contract - delegates posting and profiles to @polkadot/threads and @polkadot/profiles"
 authors.workspace = true
 
 [dependencies]
@@ -17,5 +17,5 @@ picoalloc.workspace = true
 path = "lib.rs"
 
 [[bin]]
-name = "tw33d3r-posts"
+name = "tw33d3r"
 path = "lib.rs"

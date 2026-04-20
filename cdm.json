@@ -7,15 +7,16 @@
   },
   "dependencies": {
     "acc2c3b5e912b762": {
-      "@example/tw33d3r-posts": "latest",
-      "@polkadot/contexts": "latest"
+      "@polkadot/contexts": "latest",
+      "@polkadot/profiles": "latest",
+      "@polkadot/threads": "latest"
     }
   },
   "contracts": {
     "acc2c3b5e912b762": {
       "@polkadot/contexts": {
-        "version": 0,
-        "address": "0xd5cd57C77A03de66133acC0C68BFf01D93625059",
+        "version": 1,
+        "address": "0x0aa5b864C6b8BD04Fc483ab2e7fDfc5277bb6AF0",
         "abi": [
           {
             "type": "constructor",
@@ -73,7 +74,7 @@
             "stateMutability": "view"
           }
         ],
-        "metadataCid": "bafk2bzacedw3s2xeicuq5s6zvntl3s76rjycercmep6antfkwwi5begotqxeo"
+        "metadataCid": "bafk2bzaceb3uhi3gyjv7jhs2etk3dkgoohga53l423r2fyzqgjliwcikf7tuc"
       },
       "@example/tw33d3r-posts": {
         "version": 1,
@@ -381,6 +382,594 @@
           }
         ],
         "metadataCid": "bafk2bzaceblsqbi4qgddkfud2s5th5nte524iabzaft4wpr75uux55xest6lc"
+      },
+      "@polkadot/profiles": {
+        "version": 0,
+        "address": "0x0ac28f822D36127f21480748EB546C6687c56089",
+        "abi": [
+          {
+            "type": "constructor",
+            "inputs": [],
+            "stateMutability": "nonpayable"
+          },
+          {
+            "type": "function",
+            "name": "createProfile",
+            "inputs": [
+              {
+                "name": "context_id",
+                "type": "bytes32"
+              },
+              {
+                "name": "owner",
+                "type": "address"
+              },
+              {
+                "name": "metadata_uri",
+                "type": "string"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "",
+                "type": "bytes32"
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "updateProfile",
+            "inputs": [
+              {
+                "name": "context_id",
+                "type": "bytes32"
+              },
+              {
+                "name": "profile_id",
+                "type": "bytes32"
+              },
+              {
+                "name": "metadata_uri",
+                "type": "string"
+              }
+            ],
+            "outputs": [],
+            "stateMutability": "nonpayable"
+          },
+          {
+            "type": "function",
+            "name": "getProfileInfo",
+            "inputs": [
+              {
+                "name": "context_id",
+                "type": "bytes32"
+              },
+              {
+                "name": "profile_id",
+                "type": "bytes32"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "",
+                "type": "tuple",
+                "components": [
+                  {
+                    "name": "isSome",
+                    "type": "bool"
+                  },
+                  {
+                    "name": "value",
+                    "type": "tuple",
+                    "components": [
+                      {
+                        "name": "profile_id",
+                        "type": "bytes32"
+                      },
+                      {
+                        "name": "owner",
+                        "type": "address"
+                      },
+                      {
+                        "name": "metadata_uri",
+                        "type": "string"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "getProfileOwner",
+            "inputs": [
+              {
+                "name": "context_id",
+                "type": "bytes32"
+              },
+              {
+                "name": "profile_id",
+                "type": "bytes32"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "",
+                "type": "address"
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "getProfileCount",
+            "inputs": [
+              {
+                "name": "context_id",
+                "type": "bytes32"
+              },
+              {
+                "name": "owner",
+                "type": "address"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "",
+                "type": "uint32"
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "getProfileAt",
+            "inputs": [
+              {
+                "name": "context_id",
+                "type": "bytes32"
+              },
+              {
+                "name": "owner",
+                "type": "address"
+              },
+              {
+                "name": "index",
+                "type": "uint32"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "",
+                "type": "tuple",
+                "components": [
+                  {
+                    "name": "isSome",
+                    "type": "bool"
+                  },
+                  {
+                    "name": "value",
+                    "type": "bytes32"
+                  }
+                ]
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "getProfilesPage",
+            "inputs": [
+              {
+                "name": "context_id",
+                "type": "bytes32"
+              },
+              {
+                "name": "owner",
+                "type": "address"
+              },
+              {
+                "name": "offset",
+                "type": "uint32"
+              },
+              {
+                "name": "limit",
+                "type": "uint32"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "",
+                "type": "tuple",
+                "components": [
+                  {
+                    "name": "profiles",
+                    "type": "tuple[]",
+                    "components": [
+                      {
+                        "name": "profile_id",
+                        "type": "bytes32"
+                      },
+                      {
+                        "name": "owner",
+                        "type": "address"
+                      },
+                      {
+                        "name": "metadata_uri",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "next_offset",
+                    "type": "uint32"
+                  },
+                  {
+                    "name": "done",
+                    "type": "bool"
+                  }
+                ]
+              }
+            ],
+            "stateMutability": "view"
+          }
+        ],
+        "metadataCid": "bafk2bzaceddutcyuxv7hzfvmwlmtfhkyefxacrojivsthgq3yevailg3zjgxk"
+      },
+      "@polkadot/threads": {
+        "version": 0,
+        "address": "0x051B9c24dC3F08ccAAEe5b66FBbb548fAD633D03",
+        "abi": [
+          {
+            "type": "constructor",
+            "inputs": [],
+            "stateMutability": "nonpayable"
+          },
+          {
+            "type": "function",
+            "name": "post",
+            "inputs": [
+              {
+                "name": "context_id",
+                "type": "bytes32"
+              },
+              {
+                "name": "author",
+                "type": "bytes32"
+              },
+              {
+                "name": "parents",
+                "type": "bytes32[]"
+              },
+              {
+                "name": "content_uri",
+                "type": "string"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "",
+                "type": "bytes32"
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "deletePost",
+            "inputs": [
+              {
+                "name": "context_id",
+                "type": "bytes32"
+              },
+              {
+                "name": "post_id",
+                "type": "bytes32"
+              }
+            ],
+            "outputs": [],
+            "stateMutability": "nonpayable"
+          },
+          {
+            "type": "function",
+            "name": "getPost",
+            "inputs": [
+              {
+                "name": "context_id",
+                "type": "bytes32"
+              },
+              {
+                "name": "post_id",
+                "type": "bytes32"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "",
+                "type": "tuple",
+                "components": [
+                  {
+                    "name": "isSome",
+                    "type": "bool"
+                  },
+                  {
+                    "name": "value",
+                    "type": "tuple",
+                    "components": [
+                      {
+                        "name": "post_id",
+                        "type": "bytes32"
+                      },
+                      {
+                        "name": "author",
+                        "type": "bytes32"
+                      },
+                      {
+                        "name": "parents",
+                        "type": "bytes32[]"
+                      },
+                      {
+                        "name": "content_uri",
+                        "type": "string"
+                      },
+                      {
+                        "name": "timestamp",
+                        "type": "uint64"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "getParentCount",
+            "inputs": [
+              {
+                "name": "context_id",
+                "type": "bytes32"
+              },
+              {
+                "name": "parent",
+                "type": "bytes32"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "",
+                "type": "uint32"
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "getParentAt",
+            "inputs": [
+              {
+                "name": "context_id",
+                "type": "bytes32"
+              },
+              {
+                "name": "parent",
+                "type": "bytes32"
+              },
+              {
+                "name": "index",
+                "type": "uint32"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "",
+                "type": "tuple",
+                "components": [
+                  {
+                    "name": "isSome",
+                    "type": "bool"
+                  },
+                  {
+                    "name": "value",
+                    "type": "bytes32"
+                  }
+                ]
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "getParentPostsPage",
+            "inputs": [
+              {
+                "name": "context_id",
+                "type": "bytes32"
+              },
+              {
+                "name": "parent",
+                "type": "bytes32"
+              },
+              {
+                "name": "offset",
+                "type": "uint32"
+              },
+              {
+                "name": "limit",
+                "type": "uint32"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "",
+                "type": "tuple",
+                "components": [
+                  {
+                    "name": "posts",
+                    "type": "tuple[]",
+                    "components": [
+                      {
+                        "name": "post_id",
+                        "type": "bytes32"
+                      },
+                      {
+                        "name": "author",
+                        "type": "bytes32"
+                      },
+                      {
+                        "name": "parents",
+                        "type": "bytes32[]"
+                      },
+                      {
+                        "name": "content_uri",
+                        "type": "string"
+                      },
+                      {
+                        "name": "timestamp",
+                        "type": "uint64"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "next_offset",
+                    "type": "uint32"
+                  },
+                  {
+                    "name": "done",
+                    "type": "bool"
+                  }
+                ]
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "getAuthorCount",
+            "inputs": [
+              {
+                "name": "context_id",
+                "type": "bytes32"
+              },
+              {
+                "name": "author",
+                "type": "bytes32"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "",
+                "type": "uint32"
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "getAuthorAt",
+            "inputs": [
+              {
+                "name": "context_id",
+                "type": "bytes32"
+              },
+              {
+                "name": "author",
+                "type": "bytes32"
+              },
+              {
+                "name": "index",
+                "type": "uint32"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "",
+                "type": "tuple",
+                "components": [
+                  {
+                    "name": "isSome",
+                    "type": "bool"
+                  },
+                  {
+                    "name": "value",
+                    "type": "bytes32"
+                  }
+                ]
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "getAuthorPostsPage",
+            "inputs": [
+              {
+                "name": "context_id",
+                "type": "bytes32"
+              },
+              {
+                "name": "author",
+                "type": "bytes32"
+              },
+              {
+                "name": "offset",
+                "type": "uint32"
+              },
+              {
+                "name": "limit",
+                "type": "uint32"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "",
+                "type": "tuple",
+                "components": [
+                  {
+                    "name": "posts",
+                    "type": "tuple[]",
+                    "components": [
+                      {
+                        "name": "post_id",
+                        "type": "bytes32"
+                      },
+                      {
+                        "name": "author",
+                        "type": "bytes32"
+                      },
+                      {
+                        "name": "parents",
+                        "type": "bytes32[]"
+                      },
+                      {
+                        "name": "content_uri",
+                        "type": "string"
+                      },
+                      {
+                        "name": "timestamp",
+                        "type": "uint64"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "next_offset",
+                    "type": "uint32"
+                  },
+                  {
+                    "name": "done",
+                    "type": "bool"
+                  }
+                ]
+              }
+            ],
+            "stateMutability": "view"
+          }
+        ],
+        "metadataCid": "bafk2bzaceboxw7mfzanxhsm5pfbj6ccv5kigimn2xph7lcdrgpi7obhy7hmie"
       }
     }
   }

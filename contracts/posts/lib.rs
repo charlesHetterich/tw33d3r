@@ -1,92 +1,46 @@
 #![no_main]
 #![no_std]
 
-// Note: don't `use alloc::vec::Vec;` at outer scope — the `#[pvm::contract]`
-// macro below emits one itself for the generated dispatch code around the
-// module, and the two imports collide (E0252). `PostPage`'s field uses the
-// fully-qualified `alloc::vec::Vec<Post>` so the outer scope doesn't need
-// the import, and the module below imports Vec locally for its own use.
-use alloc::string::String;
-use common::{generate_id, revert, ContextId, EntityId};
-use parity_scale_codec::{Decode, Encode};
-use pvm::storage::Mapping;
-use pvm::{caller, Address};
+// Slim application contract. Owns a context and delegates post/profile state
+// to the generic `@polkadot/threads` and `@polkadot/profiles` system
+// contracts. User-level auth ("caller must own the profile they're posting
+// as") is enforced here; the system contracts only verify that the caller is
+// the registered context owner (i.e. this contract).
+//
+// Note: no `use alloc::vec::Vec;` at outer scope — `#[pvm::contract]` emits
+// its own for the generated dispatch and the two collide. `Vec<EntityId>`
+// appears in the `post(...)` method signature; it's imported inside the
+// module below instead.
+use common::{ContextId, EntityId};
+use pvm::Address;
 use pvm_contract as pvm;
 
 cdm::import!("@polkadot/contexts");
-
-const MAX_PAGE_LIMIT: u32 = 100;
-
-/// On-chain post record (SCALE-encoded in storage).
-#[derive(Default, Clone, Encode, Decode)]
-pub struct PostData {
-    pub author: Address,
-    pub content_uri: String,
-    pub timestamp: u64,
-}
-
-/// ABI-facing view of a post (Solidity-encoded in returns). Carries its own
-/// id so a single call can fully describe a post for the client.
-#[derive(Default, pvm::SolAbi)]
-pub struct Post {
-    pub post_id: EntityId,
-    pub author: Address,
-    pub content_uri: String,
-    pub timestamp: u64,
-}
-
-/// Paginated response. `next_offset` is the offset to pass on the next
-/// call to continue where this page left off — works correctly even if
-/// slots were deleted (they get skipped but still advance the cursor).
-/// `done` flips true when the cursor has walked off the end of the index.
-#[derive(Default, pvm::SolAbi)]
-pub struct PostPage {
-    pub posts: alloc::vec::Vec<Post>,
-    pub next_offset: u32,
-    pub done: bool,
-}
+cdm::import!("@polkadot/profiles");
+cdm::import!("@polkadot/threads");
 
 #[pvm::storage]
 struct Storage {
-    // --- Context ---
     context_id: ContextId,
-
-    // --- Global feed index ---
-    post_count: u32,
-    post_at: Mapping<u32, EntityId>,
-
-    // --- Per-author index ---
-    author_post_count: Mapping<[u8; 20], u32>,
-    author_post_at: Mapping<([u8; 20], u32), EntityId>,
-
-    // --- Post data ---
-    info: Mapping<EntityId, PostData>,
-
-    // --- Admin ---
     sudo: Address,
+    // Cached references so every method call doesn't re-resolve.
+    profiles: profiles::Reference,
+    threads: threads::Reference,
 }
 
-/// Build a `Post` from an id and its stored record. Cheap enough to inline,
-/// called from every page-getter once per post.
-fn post_from(post_id: EntityId, data: PostData) -> Post {
-    Post {
-        post_id,
-        author: data.author,
-        content_uri: data.content_uri,
-        timestamp: data.timestamp,
-    }
-}
-
-#[pvm::contract(cdm = "@example/tw33d3r-posts")]
-mod tw33d3r_posts {
-    use super::{
-        caller, contexts, generate_id, post_from, pvm, revert, Address, ContextId, EntityId,
-        Post, PostData, PostPage, Storage, String, MAX_PAGE_LIMIT,
-    };
+#[pvm::contract(cdm = "@example/tw33d3r")]
+mod tw33d3r {
+    use super::{contexts, profiles, threads, pvm, Address, ContextId, EntityId, Storage};
+    use alloc::string::String;
     use alloc::vec::Vec;
+    use common::revert;
+    use pvm::caller;
 
     #[pvm::constructor]
     pub fn new() -> Result<(), Error> {
+        // Derive the context id from this contract's own address. The
+        // `@polkadot/contexts` registry is first-come-first-served, so this
+        // contract becomes the owner of that context.
         let mut addr = [0u8; 20];
         pvm::api::address(&mut addr);
         let mut context_id: ContextId = [0u8; 32];
@@ -98,176 +52,129 @@ mod tw33d3r_posts {
 
         Storage::context_id().set(&context_id);
         Storage::sudo().set(&caller());
+        Storage::profiles().set(&profiles::cdm_reference());
+        Storage::threads().set(&threads::cdm_reference());
 
         Ok(())
     }
 
-    /// Publish a new post. `content_uri` is a Bulletin/IPFS CID pointing to JSON like `{ "text": "..." }`.
-    #[pvm::method]
-    pub fn post(content_uri: String) -> EntityId {
-        let caller = caller();
-        let caller_bytes = *caller.as_fixed_bytes();
+    // --- Internal helpers ---
 
-        // Deterministic post id from global nonce
-        let count = Storage::post_count().get().unwrap_or(0);
-        let post_id: EntityId = generate_id(count as u64);
-
-        // Timestamp (seconds since epoch, first 8 bytes of the 32-byte LE buffer)
-        let mut buf = [0u8; 32];
-        pvm::api::now(&mut buf);
-        let timestamp = u64::from_le_bytes(buf[0..8].try_into().unwrap_or([0u8; 8]));
-
-        // Global index (append)
-        Storage::post_at().insert(&count, &post_id);
-        Storage::post_count().set(&(count + 1));
-
-        // Per-author index (append)
-        let ac = Storage::author_post_count().get(&caller_bytes).unwrap_or(0);
-        Storage::author_post_at().insert(&(caller_bytes, ac), &post_id);
-        Storage::author_post_count().insert(&caller_bytes, &(ac + 1));
-
-        Storage::info().insert(
-            &post_id,
-            &PostData {
-                author: caller,
-                content_uri,
-                timestamp,
-            },
-        );
-
-        post_id
+    fn require_context_id() -> ContextId {
+        match Storage::context_id().get() {
+            Some(id) => id,
+            None => revert(b"ContextIdNotSet"),
+        }
     }
 
-    /// Delete a post. Caller must be the author or the sudo admin.
-    /// Index slots are left in place; a deleted post is skipped by page getters.
+    fn require_profiles() -> profiles::Reference {
+        match Storage::profiles().get() {
+            Some(r) => r,
+            None => revert(b"ProfilesRefNotSet"),
+        }
+    }
+
+    fn require_threads() -> threads::Reference {
+        match Storage::threads().get() {
+            Some(r) => r,
+            None => revert(b"ThreadsRefNotSet"),
+        }
+    }
+
+    /// Revert unless `caller()` is the registered owner of `profile_id`.
+    /// A non-existent profile returns the zero address from `get_profile_owner`,
+    /// which naturally fails this check (no one posts as the zero address).
+    fn require_profile_owner(
+        profiles: &profiles::Reference,
+        context_id: ContextId,
+        profile_id: EntityId,
+    ) {
+        let owner = match profiles.get_profile_owner(context_id, profile_id) {
+            Ok(addr) => addr,
+            Err(_) => revert(b"ProfilesCallFailed"),
+        };
+        if owner != caller() {
+            revert(b"NotProfileOwner");
+        }
+    }
+
+    // --- Profiles ---
+
+    /// Create a new profile owned by the caller. One address may own many.
+    /// `metadata_uri` may be empty.
+    #[pvm::method]
+    pub fn create_profile(metadata_uri: String) -> EntityId {
+        let ctx = require_context_id();
+        let profiles = require_profiles();
+        match profiles.create_profile(ctx, caller(), metadata_uri) {
+            Ok(id) => id,
+            Err(_) => revert(b"CreateProfileFailed"),
+        }
+    }
+
+    /// Update the metadata URI of a profile the caller owns.
+    #[pvm::method]
+    pub fn update_profile(profile_id: EntityId, metadata_uri: String) {
+        let ctx = require_context_id();
+        let profiles = require_profiles();
+        require_profile_owner(&profiles, ctx, profile_id);
+        if let Err(_) = profiles.update_profile(ctx, profile_id, metadata_uri) {
+            revert(b"UpdateProfileFailed");
+        }
+    }
+
+    // --- Posts ---
+
+    /// Publish a post as `author` (a profile the caller owns) under every
+    /// entry in `parents`. `parents` may be empty (author-only visibility);
+    /// duplicate parents revert inside the threads contract.
+    #[pvm::method]
+    pub fn post(
+        author: EntityId,
+        parents: Vec<EntityId>,
+        content_uri: String,
+    ) -> EntityId {
+        let ctx = require_context_id();
+        let profiles = require_profiles();
+        require_profile_owner(&profiles, ctx, author);
+
+        let threads = require_threads();
+        match threads.post(ctx, author, parents, content_uri) {
+            Ok(id) => id,
+            Err(_) => revert(b"PostFailed"),
+        }
+    }
+
+    /// Delete a post. Caller must own the post's author profile, or be sudo.
     #[pvm::method]
     pub fn delete_post(post_id: EntityId) {
-        let data = match Storage::info().get(&post_id) {
-            Some(d) => d,
-            None => revert(b"PostNotFound"),
+        let ctx = require_context_id();
+        let threads = require_threads();
+
+        let post = match threads.get_post(ctx, post_id) {
+            Ok(Some(p)) => p,
+            Ok(None) => revert(b"PostNotFound"),
+            Err(_) => revert(b"ThreadsCallFailed"),
         };
 
-        let is_author = data.author == caller();
+        // Sudo bypass; otherwise the caller must own the author profile.
         let is_sudo = Storage::sudo().get().map_or(false, |s| s == caller());
-        if !is_author && !is_sudo {
-            revert(b"Unauthorized");
+        if !is_sudo {
+            let profiles = require_profiles();
+            require_profile_owner(&profiles, ctx, post.author);
         }
 
-        Storage::info().remove(&post_id);
+        if let Err(_) = threads.delete_post(ctx, post_id) {
+            revert(b"DeletePostFailed");
+        }
     }
 
-    // --- Context ---
+    // --- Queries ---
 
     #[pvm::method]
     pub fn get_context_id() -> ContextId {
         Storage::context_id().get().unwrap_or([0u8; 32])
     }
-
-    // --- Global queries (Feed) ---
-
-    #[pvm::method]
-    pub fn get_post_count() -> u32 {
-        Storage::post_count().get().unwrap_or(0)
-    }
-
-    #[pvm::method]
-    pub fn get_post_at(index: u32) -> Option<EntityId> {
-        Storage::post_at().get(&index)
-    }
-
-    /// Batch-fetch a page of the global feed in reverse-chronological order.
-    /// `offset` is counted from the newest post (0 = newest). `limit` is
-    /// capped at `MAX_PAGE_LIMIT`. Deleted posts are skipped, but `next_offset`
-    /// still advances over them so the client never loops.
-    #[pvm::method]
-    pub fn get_posts_page(offset: u32, limit: u32) -> PostPage {
-        let total = Storage::post_count().get().unwrap_or(0);
-        let cap = if limit > MAX_PAGE_LIMIT { MAX_PAGE_LIMIT } else { limit };
-
-        if offset >= total || cap == 0 {
-            return PostPage {
-                posts: Vec::new(),
-                next_offset: total,
-                done: true,
-            };
-        }
-
-        let mut posts: Vec<Post> = Vec::with_capacity(cap as usize);
-        let mut scanned: u32 = 0;
-
-        while posts.len() < cap as usize && offset + scanned < total {
-            let idx = total - 1 - offset - scanned;
-            scanned += 1;
-
-            if let Some(post_id) = Storage::post_at().get(&idx) {
-                if let Some(data) = Storage::info().get(&post_id) {
-                    posts.push(post_from(post_id, data));
-                }
-            }
-        }
-
-        let next_offset = offset + scanned;
-        let done = next_offset >= total;
-        PostPage { posts, next_offset, done }
-    }
-
-    // --- Per-author queries ---
-
-    #[pvm::method]
-    pub fn get_author_post_count(author: Address) -> u32 {
-        Storage::author_post_count()
-            .get(author.as_fixed_bytes())
-            .unwrap_or(0)
-    }
-
-    #[pvm::method]
-    pub fn get_author_post_at(author: Address, index: u32) -> Option<EntityId> {
-        Storage::author_post_at().get(&(*author.as_fixed_bytes(), index))
-    }
-
-    /// Batch-fetch a page of `author`'s posts in reverse-chronological order.
-    /// Same semantics as `get_posts_page` but scoped to a single author.
-    #[pvm::method]
-    pub fn get_author_posts_page(author: Address, offset: u32, limit: u32) -> PostPage {
-        let author_bytes = *author.as_fixed_bytes();
-        let total = Storage::author_post_count().get(&author_bytes).unwrap_or(0);
-        let cap = if limit > MAX_PAGE_LIMIT { MAX_PAGE_LIMIT } else { limit };
-
-        if offset >= total || cap == 0 {
-            return PostPage {
-                posts: Vec::new(),
-                next_offset: total,
-                done: true,
-            };
-        }
-
-        let mut posts: Vec<Post> = Vec::with_capacity(cap as usize);
-        let mut scanned: u32 = 0;
-
-        while posts.len() < cap as usize && offset + scanned < total {
-            let idx = total - 1 - offset - scanned;
-            scanned += 1;
-
-            if let Some(post_id) = Storage::author_post_at().get(&(author_bytes, idx)) {
-                if let Some(data) = Storage::info().get(&post_id) {
-                    posts.push(post_from(post_id, data));
-                }
-            }
-        }
-
-        let next_offset = offset + scanned;
-        let done = next_offset >= total;
-        PostPage { posts, next_offset, done }
-    }
-
-    // --- Post data queries ---
-
-    #[pvm::method]
-    pub fn get_post(post_id: EntityId) -> Option<Post> {
-        Storage::info().get(&post_id).map(|p| post_from(post_id, p))
-    }
-
-    // --- Admin queries ---
 
     #[pvm::method]
     pub fn get_sudo() -> Address {
