@@ -1,26 +1,24 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
+import type { FixedSizeBinary } from "polkadot-api";
 import { PAGE, type Post, type PostPage, type QueryResult, toHex } from "../../chain";
 import { useIntersectionObserver } from "../hooks";
 import { PostCard } from "./PostCard";
 
 interface PostFeedProps {
-  /** Unique key identifying this feed — react-query caches pages under it. */
+  /** Unique cache key for this feed. Prefix with `["posts"]` so the Composer
+   * can invalidate everything post-related on publish. */
   queryKey: readonly unknown[];
-  /** How to fetch a page. Takes offset/limit, returns a paginated contract result. */
+  /** Page fetcher — offset/limit in, contract QueryResult<PostPage> out. */
   queryFn: (offset: number, limit: number) => Promise<QueryResult<PostPage>>;
   emptyTitle: string;
   emptyBody: string;
-  onAuthorClick?: (address: string) => void;
+  onAuthorClick?: (profileId: FixedSizeBinary<32>) => void;
 }
 
 /**
- * Shared infinite-scroll post list — the only difference between the global
- * feed, "my posts", and a profile timeline is the page source, so they
- * collapse into one component parameterized by `queryFn` + `queryKey`.
- *
- * React-query handles cancellation, page caching, stale-while-revalidate,
- * StrictMode double-invoke, and dedupe by query key — none of the manual
- * generation/ref bookkeeping the previous hand-rolled version needed.
+ * Shared infinite-scroll post list. The only difference between the global
+ * feed, a profile's timeline, and a reply thread is the `queryFn` — which
+ * ultimately just varies which parent/author is queried from @polkadot/threads.
  */
 export function PostFeed({
   queryKey,

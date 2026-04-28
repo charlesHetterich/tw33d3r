@@ -9,7 +9,8 @@
     "acc2c3b5e912b762": {
       "@polkadot/contexts": "latest",
       "@polkadot/profiles": "latest",
-      "@polkadot/threads": "latest"
+      "@polkadot/threads": "latest",
+      "@example/tw33d3r": "latest"
     }
   },
   "contracts": {
@@ -970,6 +971,112 @@
           }
         ],
         "metadataCid": "bafk2bzaceboxw7mfzanxhsm5pfbj6ccv5kigimn2xph7lcdrgpi7obhy7hmie"
+      },
+      "@example/tw33d3r": {
+        "version": 0,
+        "address": "0x625E59251Fd62F206E845dF7ACF88B86c10Fa55F",
+        "abi": [
+          {
+            "type": "constructor",
+            "inputs": [],
+            "stateMutability": "nonpayable"
+          },
+          {
+            "type": "function",
+            "name": "createProfile",
+            "inputs": [
+              {
+                "name": "metadata_uri",
+                "type": "string"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "",
+                "type": "bytes32"
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "updateProfile",
+            "inputs": [
+              {
+                "name": "profile_id",
+                "type": "bytes32"
+              },
+              {
+                "name": "metadata_uri",
+                "type": "string"
+              }
+            ],
+            "outputs": [],
+            "stateMutability": "nonpayable"
+          },
+          {
+            "type": "function",
+            "name": "post",
+            "inputs": [
+              {
+                "name": "author",
+                "type": "bytes32"
+              },
+              {
+                "name": "parents",
+                "type": "bytes32[]"
+              },
+              {
+                "name": "content_uri",
+                "type": "string"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "",
+                "type": "bytes32"
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "deletePost",
+            "inputs": [
+              {
+                "name": "post_id",
+                "type": "bytes32"
+              }
+            ],
+            "outputs": [],
+            "stateMutability": "nonpayable"
+          },
+          {
+            "type": "function",
+            "name": "getContextId",
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "",
+                "type": "bytes32"
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "getSudo",
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "",
+                "type": "address"
+              }
+            ],
+            "stateMutability": "view"
+          }
+        ],
+        "metadataCid": "bafk2bzaceaxhxsnwyly6gierktrw7if3dxirh3hw2q3fqzadmr25my2dpojw2"
       }
     }
   }

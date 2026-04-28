@@ -1,15 +1,20 @@
 import { forwardRef, useImperativeHandle, useRef, useState } from "react";
-import type { SignerState } from "@polkadot-apps/signer";
 import { useQueryClient } from "@tanstack/react-query";
+import type { SignerState } from "@polkadot-apps/signer";
+import type { FixedSizeBinary } from "polkadot-api";
 import {
   BulletinUploadError,
+  GLOBAL_FEED,
   MAX_LEN,
   computeCid,
   publishPost,
+  toHex,
   uploadBytes,
 } from "../../chain";
 import type { PostContent } from "../../types";
+import { useMyProfiles } from "../hooks";
 import { Avatar } from "./Avatar";
+import { CreateProfileModal } from "./CreateProfileModal";
 
 export interface ComposerHandle {
   focus: () => void;
@@ -26,8 +31,16 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
   const [text, setText] = useState("");
   const [status, setStatus] = useState<"idle" | "posting" | "error">("idle");
   const [statusMsg, setStatusMsg] = useState("");
+  const [showCreateProfile, setShowCreateProfile] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const queryClient = useQueryClient();
+
+  const { data: profiles, isPending: profilesPending } = useMyProfiles(account.h160Address);
+
+  // For now we always post as the user's first profile. A picker UI will
+  // plug in here once we support multi-profile switching.
+  const activeProfile = profiles?.[0];
+  const activeProfileId: FixedSizeBinary<32> | undefined = activeProfile?.profile_id;
 
   useImperativeHandle(ref, () => ({
     focus: () => {
@@ -38,7 +51,7 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
 
   const submit = async () => {
     const trimmed = text.trim();
-    if (!trimmed || status === "posting") return;
+    if (!trimmed || status === "posting" || !activeProfileId) return;
 
     setStatus("posting");
     try {
@@ -46,22 +59,16 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
       const bytes = new TextEncoder().encode(JSON.stringify(content));
       const cid = computeCid(bytes);
 
-      // Serialize: upload then on-chain tx. Parallel caused nonce races
-      // ("Invalid/Stale" + "Transport is disposed" on the second post).
       setStatusMsg("Uploading to Bulletin…");
       await uploadBytes(bytes, "post");
 
       setStatusMsg("Waiting for signature…");
-      const res = await publishPost(cid);
+      const res = await publishPost(activeProfileId, [GLOBAL_FEED], cid);
       if (!res.ok) throw new Error("Post transaction rejected");
 
       setText("");
       setStatus("idle");
       setStatusMsg("");
-      // Invalidate any open post feeds — the global feed *and* the author's
-      // own timeline. React-query refetches only the queries that are
-      // actively observed, so this is cheap even when many feed queries
-      // exist in the cache.
       queryClient.invalidateQueries({ queryKey: ["posts"] });
     } catch (err: unknown) {
       setStatus("error");
@@ -69,13 +76,36 @@ export const Composer = forwardRef<ComposerHandle, ComposerProps>(function Compo
     }
   };
 
+  // No profile yet — show CTA instead of composer.
+  if (!profilesPending && (!profiles || profiles.length === 0)) {
+    return (
+      <div className="composer-empty">
+        <span className="composer-empty-msg">You need a profile to post.</span>
+        <button
+          className="btn btn-primary"
+          onClick={() => setShowCreateProfile(true)}
+          type="button"
+        >
+          Create profile
+        </button>
+        {showCreateProfile && (
+          <CreateProfileModal
+            account={account}
+            onClose={() => setShowCreateProfile(false)}
+          />
+        )}
+      </div>
+    );
+  }
+
   const len = text.length;
-  const disabled = !text.trim() || status === "posting" || len > MAX_LEN;
+  const disabled = !text.trim() || status === "posting" || len > MAX_LEN || !activeProfileId;
   const posting = status === "posting";
+  const seed = activeProfileId ? toHex(activeProfileId) : account.h160Address;
 
   return (
     <div className="composer">
-      <Avatar address={account.h160Address} size={40} />
+      <Avatar seed={seed} size={40} />
       <div className="composer-main">
         <textarea
           ref={textareaRef}

@@ -31,7 +31,7 @@ export function Sidebar({ view, onNavigate, account, onComposeClick }: SidebarPr
           />
           <NavItem
             icon={<UserIcon filled={active === "mine" || active === "profile"} />}
-            label="My Posts"
+            label="Profile"
             active={active === "mine"}
             onClick={() => onNavigate({ kind: "mine" })}
           />
@@ -49,7 +49,7 @@ export function Sidebar({ view, onNavigate, account, onComposeClick }: SidebarPr
         {account && (
           <AccountPill
             account={account}
-            onClick={() => onNavigate({ kind: "profile", address: account.h160Address })}
+            onClick={() => onNavigate({ kind: "mine" })}
           />
         )}
       </div>
@@ -99,7 +99,7 @@ function AccountPill({
       onClick={onClick}
       type="button"
     >
-      <Avatar address={account.h160Address} size={40} />
+      <Avatar seed={account.h160Address} size={40} />
       <div className="account-pill-text">
         <span className="account-pill-name">{name}</span>
         <span className="account-pill-handle">{handle}</span>

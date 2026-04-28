@@ -15,3 +15,10 @@ polkavm-derive = "0.31"
 parity-scale-codec = { version = "3.7", default-features = false, features = ["derive"] }
 picoalloc = "5.2"
 common = { git = "https://github.com/paritytech/contract-developer-tools", package = "common" }
+
+# Local override: test the in-progress `SolType::Array` cross-contract call
+# encoding fix before pushing the branch. Drop this block once the fix is
+# merged upstream and the branch catches up.
+[patch."https://github.com/paritytech/cargo-pvm-contract"]
+pvm_contract = { path = "/Users/charleshetterich/code/cargo-pvm-contract/crates/pvm_contract" }
+pvm-contract-macros = { path = "/Users/charleshetterich/code/cargo-pvm-contract/crates/pvm-contract-macros" }

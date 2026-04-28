@@ -2,5 +2,6 @@ target/
 dist/
 node_modules/
 reference-repos/
-dist.car
 .cdm/
+
+*.car

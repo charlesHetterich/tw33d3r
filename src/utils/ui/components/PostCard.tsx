@@ -1,36 +1,34 @@
 import { truncateAddress } from "@polkadot-apps/address";
-import { useQuery } from "@tanstack/react-query";
-import { fetchJson, gateway, type Post, toHex } from "../../chain";
+import type { FixedSizeBinary } from "polkadot-api";
+import { toHex, type Post } from "../../chain";
 import { formatTime } from "../../time";
-import type { PostContent } from "../../types";
 import { Avatar } from "./Avatar";
 import { LikeIcon, ReplyIcon, RepostIcon, ShareIcon } from "./Icons";
+import { usePostContent, useProfileInfo, useProfileMetadata } from "../hooks";
 
 interface PostCardProps {
   post: Post;
-  onAuthorClick?: (address: string) => void;
+  onAuthorClick?: (profileId: FixedSizeBinary<32>) => void;
 }
 
 export function PostCard({ post, onAuthorClick }: PostCardProps) {
-  const author = String(post.author);
-  const handle = shortHandle(author);
-  const display = truncateAddress(author);
+  const authorHex = toHex(post.author);
 
-  // Content is content-addressed on Bulletin, so it never changes for a
-  // given CID — cache forever. React-query also dedupes concurrent fetches
-  // of the same CID across cards, which matters when the same post shows
-  // up in both a profile view and the global feed.
-  const { data: content } = useQuery({
-    queryKey: ["bulletin-content", post.content_uri],
-    queryFn: () => fetchJson<PostContent>(post.content_uri, gateway),
-    staleTime: Infinity,
-    gcTime: Infinity,
-    retry: 2,
-  });
+  // Nested resolution: profile id → profile info (owner + metadata_uri) →
+  // metadata JSON (name/bio). Each layer is cached independently so two
+  // posts by the same author share the info and metadata fetches.
+  const { data: profileInfo } = useProfileInfo(post.author);
+  const { data: metadata } = useProfileMetadata(post.author);
+  const { data: content } = usePostContent(post.content_uri);
+
+  const ownerAddr = profileInfo?.owner ? String(profileInfo.owner) : undefined;
+  const displayName =
+    metadata?.name?.trim() || (ownerAddr ? truncateAddress(ownerAddr) : shortId(authorHex));
+  const handle = ownerAddr ? shortHandle(ownerAddr) : shortHandle(authorHex);
 
   const openAuthor = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onAuthorClick?.(author);
+    onAuthorClick?.(post.author);
   };
 
   return (
@@ -41,17 +39,17 @@ export function PostCard({ post, onAuthorClick }: PostCardProps) {
         type="button"
         aria-label="Open profile"
       >
-        <Avatar address={author} />
+        <Avatar seed={authorHex} />
       </button>
       <div className="post-main">
         <header className="post-header">
           <button
             className="post-name post-link"
             type="button"
-            title={author}
+            title={ownerAddr ?? authorHex}
             onClick={openAuthor}
           >
-            {display}
+            {displayName}
           </button>
           <button className="post-handle post-link" type="button" onClick={openAuthor}>
             @{handle}
@@ -94,6 +92,11 @@ function ActionButton({
   );
 }
 
-function shortHandle(address: string): string {
-  return address.replace(/^0x/i, "").slice(-6).toLowerCase();
+function shortHandle(hex: string): string {
+  return hex.replace(/^0x/i, "").slice(-6).toLowerCase();
+}
+
+function shortId(hex: string): string {
+  const clean = hex.replace(/^0x/i, "");
+  return `${clean.slice(0, 6)}…${clean.slice(-4)}`;
 }

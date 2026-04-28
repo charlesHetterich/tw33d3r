@@ -11,6 +11,7 @@
 // its own for the generated dispatch and the two collide. `Vec<EntityId>`
 // appears in the `post(...)` method signature; it's imported inside the
 // module below instead.
+use alloc::string::String;
 use common::{ContextId, EntityId};
 use pvm::Address;
 use pvm_contract as pvm;
@@ -151,17 +152,25 @@ mod tw33d3r {
         let ctx = require_context_id();
         let threads = require_threads();
 
-        let post = match threads.get_post(ctx, post_id) {
-            Ok(Some(p)) => p,
-            Ok(None) => revert(b"PostNotFound"),
+        // Cross-contract `Option<Post>` returns are lowered by the cdm macro
+        // into a tuple-shape with `is_some: bool` + `value: Post` (matching
+        // the Solidity ABI tuple), and `Post` itself arrives as a positional
+        // tuple — `.0` post_id, `.1` author, `.2` parents, `.3` content_uri,
+        // `.4` timestamp — rather than a named struct.
+        let ret = match threads.get_post(ctx, post_id) {
+            Ok(r) => r,
             Err(_) => revert(b"ThreadsCallFailed"),
         };
+        if !ret.is_some {
+            revert(b"PostNotFound");
+        }
+        let post_author: EntityId = ret.value.1;
 
         // Sudo bypass; otherwise the caller must own the author profile.
         let is_sudo = Storage::sudo().get().map_or(false, |s| s == caller());
         if !is_sudo {
             let profiles = require_profiles();
-            require_profile_owner(&profiles, ctx, post.author);
+            require_profile_owner(&profiles, ctx, post_author);
         }
 
         if let Err(_) = threads.delete_post(ctx, post_id) {

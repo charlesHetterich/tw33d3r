@@ -694,6 +694,127 @@ textarea {
 .post-link.post-handle:hover { text-decoration: underline; }
 
 /* ──────────────────────────────────────────────────────────── */
+/*  Composer — empty state (no profile yet)                      */
+/* ──────────────────────────────────────────────────────────── */
+
+.composer-empty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.composer-empty-msg {
+  font-size: 15px;
+  color: var(--text-dim);
+}
+
+/* ──────────────────────────────────────────────────────────── */
+/*  Modal (Create profile)                                       */
+/* ──────────────────────────────────────────────────────────── */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.modal {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 24px;
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+.modal-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.modal-sub {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-dim);
+  line-height: 1.45;
+}
+
+.form-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.form-input {
+  background: var(--surface);
+  border: 1px solid transparent;
+  color: var(--text);
+  padding: 12px 14px;
+  border-radius: var(--r-md);
+  font-size: 15px;
+  outline: none;
+  transition: background 120ms, border-color 120ms;
+  resize: vertical;
+  font-family: inherit;
+}
+.form-input:focus {
+  background: var(--bg);
+  border-color: var(--accent);
+}
+
+.modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+.modal-wallet {
+  font-size: 13px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+.modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.modal-status { font-size: 13px; color: var(--text-dim); }
+.modal-error  { font-size: 13px; color: var(--danger); }
+
+/* ──────────────────────────────────────────────────────────── */
+/*  Profile header extras (bio, owner address)                   */
+/* ──────────────────────────────────────────────────────────── */
+
+.profile-meta {
+  font-size: 13px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+.profile-bio {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+/* ──────────────────────────────────────────────────────────── */
 /*  Scrollbar                                                    */
 /* ──────────────────────────────────────────────────────────── */
 
