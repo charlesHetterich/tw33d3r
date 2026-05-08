@@ -22,9 +22,14 @@ export function PostCard({ post, onAuthorClick }: PostCardProps) {
   const { data: content } = usePostContent(post.content_uri);
 
   const ownerAddr = profileInfo?.owner ? String(profileInfo.owner) : undefined;
+  const username = profileInfo?.username?.trim();
   const displayName =
-    metadata?.name?.trim() || (ownerAddr ? truncateAddress(ownerAddr) : shortId(authorHex));
-  const handle = ownerAddr ? shortHandle(ownerAddr) : shortHandle(authorHex);
+    metadata?.name?.trim() ||
+    username ||
+    (ownerAddr ? truncateAddress(ownerAddr) : shortId(authorHex));
+  // Prefer the on-chain @handle; fall back to an address-derived stub for
+  // legacy profiles that pre-date username support.
+  const handle = username || (ownerAddr ? shortHandle(ownerAddr) : shortHandle(authorHex));
 
   const openAuthor = (e: React.MouseEvent) => {
     e.stopPropagation();

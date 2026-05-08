@@ -385,8 +385,8 @@
         "metadataCid": "bafk2bzaceblsqbi4qgddkfud2s5th5nte524iabzaft4wpr75uux55xest6lc"
       },
       "@polkadot/profiles": {
-        "version": 0,
-        "address": "0x0ac28f822D36127f21480748EB546C6687c56089",
+        "version": 1,
+        "address": "0x45f5eDfE587F93fEe9072b2CB7E6A7FAd3000793",
         "abi": [
           {
             "type": "constructor",
@@ -404,6 +404,10 @@
               {
                 "name": "owner",
                 "type": "address"
+              },
+              {
+                "name": "username",
+                "type": "string"
               },
               {
                 "name": "metadata_uri",
@@ -432,6 +436,26 @@
               },
               {
                 "name": "metadata_uri",
+                "type": "string"
+              }
+            ],
+            "outputs": [],
+            "stateMutability": "nonpayable"
+          },
+          {
+            "type": "function",
+            "name": "renameProfile",
+            "inputs": [
+              {
+                "name": "context_id",
+                "type": "bytes32"
+              },
+              {
+                "name": "profile_id",
+                "type": "bytes32"
+              },
+              {
+                "name": "new_username",
                 "type": "string"
               }
             ],
@@ -471,6 +495,10 @@
                       {
                         "name": "owner",
                         "type": "address"
+                      },
+                      {
+                        "name": "username",
+                        "type": "string"
                       },
                       {
                         "name": "metadata_uri",
@@ -599,6 +627,71 @@
                         "type": "address"
                       },
                       {
+                        "name": "username",
+                        "type": "string"
+                      },
+                      {
+                        "name": "metadata_uri",
+                        "type": "string"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "next_offset",
+                    "type": "uint32"
+                  },
+                  {
+                    "name": "done",
+                    "type": "bool"
+                  }
+                ]
+              }
+            ],
+            "stateMutability": "view"
+          },
+          {
+            "type": "function",
+            "name": "searchByUsernamePrefix",
+            "inputs": [
+              {
+                "name": "context_id",
+                "type": "bytes32"
+              },
+              {
+                "name": "prefix",
+                "type": "string"
+              },
+              {
+                "name": "offset",
+                "type": "uint32"
+              },
+              {
+                "name": "limit",
+                "type": "uint32"
+              }
+            ],
+            "outputs": [
+              {
+                "name": "",
+                "type": "tuple",
+                "components": [
+                  {
+                    "name": "profiles",
+                    "type": "tuple[]",
+                    "components": [
+                      {
+                        "name": "profile_id",
+                        "type": "bytes32"
+                      },
+                      {
+                        "name": "owner",
+                        "type": "address"
+                      },
+                      {
+                        "name": "username",
+                        "type": "string"
+                      },
+                      {
                         "name": "metadata_uri",
                         "type": "string"
                       }
@@ -618,7 +711,7 @@
             "stateMutability": "view"
           }
         ],
-        "metadataCid": "bafk2bzaceddutcyuxv7hzfvmwlmtfhkyefxacrojivsthgq3yevailg3zjgxk"
+        "metadataCid": "bafk2bzacedfyo6rpjfbrdfvrqba6leqsgn4fstepsicu2nn2vhkblwl6ygb4s"
       },
       "@polkadot/threads": {
         "version": 0,

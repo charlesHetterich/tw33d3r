@@ -1,12 +1,14 @@
-import { useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import type { FixedSizeBinary, HexString } from "polkadot-api";
 import {
+  PAGE,
   fetchJson,
   gateway,
   getContextId,
   getProfileInfo,
   getProfilesPage,
+  searchProfilesByUsernamePrefix,
   toHex,
 } from "../chain";
 import type { PostContent, ProfileMetadata } from "../types";
@@ -102,6 +104,55 @@ export function useMyProfiles(address: HexString | string | undefined) {
       return res.success ? res.value.profiles : [];
     },
     enabled: !!contextId && !!address,
+    staleTime: 30_000,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// Generic UI helpers
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Returns `value` only after it has been stable for `delayMs`. Used to gate
+ * search firing on "user stopped typing for 1s". Resets the timer on every
+ * change, so pressing more keys cancels the in-flight wait — but does NOT
+ * cancel an already-launched query (react-query handles that itself when the
+ * query key changes).
+ */
+export function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(t);
+  }, [value, delayMs]);
+  return debounced;
+}
+
+/**
+ * Paginated username-prefix search, keyed by `["search-profiles", ctxHex,
+ * normalized-prefix]`. Both the in-typing dropdown and the full-page results
+ * view consume this hook with the same prefix, so they share cache + scroll
+ * progress: scrolling in the dropdown pre-loads pages for the full page, and
+ * vice versa.
+ *
+ * Empty `prefix` is intentionally disabled — the contract treats it as
+ * "every profile in the context", which is fine but useless mid-typing and
+ * can be expensive on a populated registry.
+ */
+export function useProfileSearch(prefix: string) {
+  const { data: contextId } = useContextId();
+  const ctxHex = contextId ? toHex(contextId) : undefined;
+  const trimmed = prefix.trim();
+
+  return useInfiniteQuery({
+    queryKey: ["search-profiles", ctxHex, trimmed],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) =>
+      searchProfilesByUsernamePrefix(contextId!, trimmed, pageParam, PAGE),
+    getNextPageParam: last =>
+      last.success && !last.value.done ? last.value.next_offset : undefined,
+    enabled: !!contextId && trimmed.length > 0,
+    // Keep results around briefly so re-typing the same prefix is instant.
     staleTime: 30_000,
   });
 }

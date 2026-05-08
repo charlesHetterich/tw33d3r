@@ -10,6 +10,7 @@ import type { QueryResult } from "./threads";
 export interface Profile {
   profile_id: FixedSizeBinary<32>;
   owner: HexString;
+  username: string;
   metadata_uri: string;
 }
 
@@ -55,4 +56,20 @@ export async function getProfilesPage(
 ): Promise<QueryResult<ProfilePage>> {
   const profiles = await profilesReady;
   return (profiles as any).getProfilesPage.query(contextId, owner, offset, limit);
+}
+
+/**
+ * Paginated alphabetical search for profiles whose username starts with
+ * `prefix` (within `contextId`). Empty prefix returns every profile in the
+ * context. Sub-linear in the total profile count — backed by the on-chain
+ * `OrderedIndex` B-tree on `(ContextId, username)`.
+ */
+export async function searchProfilesByUsernamePrefix(
+  contextId: FixedSizeBinary<32>,
+  prefix: string,
+  offset: number,
+  limit: number,
+): Promise<QueryResult<ProfilePage>> {
+  const profiles = await profilesReady;
+  return (profiles as any).searchByUsernamePrefix.query(contextId, prefix, offset, limit);
 }

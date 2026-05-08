@@ -102,12 +102,13 @@ mod tw33d3r {
     // --- Profiles ---
 
     /// Create a new profile owned by the caller. One address may own many.
-    /// `metadata_uri` may be empty.
+    /// `username` must be unique within this context (enforced by the
+    /// profiles contract). `metadata_uri` may be empty.
     #[pvm::method]
-    pub fn create_profile(metadata_uri: String) -> EntityId {
+    pub fn create_profile(username: String, metadata_uri: String) -> EntityId {
         let ctx = require_context_id();
         let profiles = require_profiles();
-        match profiles.create_profile(ctx, caller(), metadata_uri) {
+        match profiles.create_profile(ctx, caller(), username, metadata_uri) {
             Ok(id) => id,
             Err(_) => revert(b"CreateProfileFailed"),
         }
@@ -121,6 +122,18 @@ mod tw33d3r {
         require_profile_owner(&profiles, ctx, profile_id);
         if let Err(_) = profiles.update_profile(ctx, profile_id, metadata_uri) {
             revert(b"UpdateProfileFailed");
+        }
+    }
+
+    /// Rename a profile the caller owns. Reverts if the new username is
+    /// already taken in this context.
+    #[pvm::method]
+    pub fn rename_profile(profile_id: EntityId, new_username: String) {
+        let ctx = require_context_id();
+        let profiles = require_profiles();
+        require_profile_owner(&profiles, ctx, profile_id);
+        if let Err(_) = profiles.rename_profile(ctx, profile_id, new_username) {
+            revert(b"RenameProfileFailed");
         }
     }
 

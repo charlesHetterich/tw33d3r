@@ -13,7 +13,7 @@
     "build:contracts": "cdm build",
     "deploy": "cdm deploy -n paseo",
     "preview": "vite preview",
-    "deploy:frontend": "MNEMONIC=$(node -e \"process.stdout.write(require(require('os').homedir()+'/.cdm/accounts.json').paseo.mnemonic)\") DOTNS_STATUS=full npx bulletin-deploy ./dist tw33d3r.dot --playground"
+    "deploy:frontend": "dot deploy --signer dev --domain tw33d3r-4tj0r9 --buildDir dist --playground --modable --env testnet"
   },
   "dependencies": {
     "@novasamatech/host-api": "^0.6.15",

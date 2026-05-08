@@ -20,10 +20,12 @@ export interface ProfileMetadata {
  * - `feed` — global timeline
  * - `mine` — currently-selected profile's timeline
  * - `profile` — some profile's timeline (arrived at by clicking an author)
+ * - `search` — full-page username search results for `query`
  */
 export type View =
   | { kind: "feed" }
   | { kind: "mine" }
-  | { kind: "profile"; profileId: FixedSizeBinary<32> };
+  | { kind: "profile"; profileId: FixedSizeBinary<32> }
+  | { kind: "search"; query: string };
 
 export type Tab = View["kind"];

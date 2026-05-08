@@ -22,9 +22,15 @@ export function Profile({ profileId, onAuthorClick }: ProfileProps) {
 
   const profileIdHex = toHex(profileId);
   const ownerAddr = info?.owner ? String(info.owner) : undefined;
-  const displayName = metadata?.name?.trim() || (ownerAddr ? truncateAddress(ownerAddr) : shortId(profileIdHex));
+  const username = info?.username?.trim();
+  const displayName =
+    metadata?.name?.trim() ||
+    username ||
+    (ownerAddr ? truncateAddress(ownerAddr) : shortId(profileIdHex));
   const bio = metadata?.bio?.trim();
-  const handle = ownerAddr ? shortHandle(ownerAddr) : shortHandle(profileIdHex);
+  // On-chain username is the canonical handle; pre-username profiles fall
+  // back to the address-derived stub.
+  const handle = username || (ownerAddr ? shortHandle(ownerAddr) : shortHandle(profileIdHex));
 
   return (
     <div className="profile">

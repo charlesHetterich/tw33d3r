@@ -1,17 +1,15 @@
-import { SearchIcon } from "./Icons";
+import type { ReactNode } from "react";
 
-export function TrendsPanel() {
+interface TrendsPanelProps {
+  /** Search box rendered above the trends cards. Lives in App so it owns
+   * navigation; this panel just provides the slot. */
+  searchSlot?: ReactNode;
+}
+
+export function TrendsPanel({ searchSlot }: TrendsPanelProps) {
   return (
     <aside className="trends">
-      <div className="trends-search">
-        <span className="trends-search-icon"><SearchIcon /></span>
-        <input
-          className="trends-search-input"
-          type="search"
-          placeholder="Search"
-          disabled
-        />
-      </div>
+      {searchSlot}
 
       <section className="trends-card">
         <h2 className="trends-card-title">Getting started</h2>

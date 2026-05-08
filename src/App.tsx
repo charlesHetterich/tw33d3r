@@ -16,6 +16,8 @@ import { TrendsPanel } from "./utils/ui/components/TrendsPanel";
 import { Composer, type ComposerHandle } from "./utils/ui/components/Composer";
 import { PostFeed } from "./utils/ui/components/PostFeed";
 import { Profile } from "./utils/ui/components/Profile";
+import { SearchBox } from "./utils/ui/components/SearchBox";
+import { SearchResults } from "./utils/ui/components/SearchResults";
 
 export default function App() {
   const [view, setView] = useState<View>({ kind: "feed" });
@@ -35,6 +37,14 @@ export default function App() {
     (profileId: FixedSizeBinary<32>) => setView({ kind: "profile", profileId }),
     [],
   );
+  const openSearch = useCallback(
+    (query: string) => setView({ kind: "search", query }),
+    [],
+  );
+
+  // Drive the SearchBox from outside when navigating away from search →
+  // input clears; navigating back to it preserves whatever the user typed.
+  const searchExternalQuery = view.kind === "search" ? view.query : "";
 
   return (
     <div className="layout">
@@ -50,7 +60,7 @@ export default function App() {
           <PageTitle view={view} />
         </header>
 
-        {account && view.kind !== "profile" && (
+        {account && view.kind !== "profile" && view.kind !== "search" && (
           <Composer ref={composerRef} account={account} />
         )}
 
@@ -73,9 +83,21 @@ export default function App() {
         {view.kind === "profile" && (
           <Profile profileId={view.profileId} onAuthorClick={openAuthor} />
         )}
+
+        {view.kind === "search" && (
+          <SearchResults query={view.query} onPickProfile={openAuthor} />
+        )}
       </main>
 
-      <TrendsPanel />
+      <TrendsPanel
+        searchSlot={
+          <SearchBox
+            onSubmit={openSearch}
+            onPickProfile={openAuthor}
+            externalQuery={searchExternalQuery}
+          />
+        }
+      />
     </div>
   );
 }
@@ -118,6 +140,13 @@ function MyTimeline({
 function PageTitle({ view }: { view: View }) {
   if (view.kind === "feed") return <h1 className="page-title">Home</h1>;
   if (view.kind === "mine") return <h1 className="page-title">Profile</h1>;
+  if (view.kind === "search") {
+    return (
+      <h1 className="page-title">
+        Search<span className="page-title-sub"> · "{view.query}"</span>
+      </h1>
+    );
+  }
   return <ProfilePageTitle profileId={view.profileId} />;
 }
 
@@ -126,6 +155,7 @@ function ProfilePageTitle({ profileId }: { profileId: FixedSizeBinary<32> }) {
   const { data: metadata } = useProfileMetadata(profileId);
   const title =
     metadata?.name?.trim() ||
+    info?.username?.trim() ||
     (info?.owner ? truncateAddress(String(info.owner)) : toHex(profileId).slice(0, 10) + "…");
   return <h1 className="page-title">{title}</h1>;
 }

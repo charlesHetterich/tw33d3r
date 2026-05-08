@@ -40,15 +40,21 @@ export async function getContextId(): Promise<FixedSizeBinary<32>> {
 }
 
 /** Create a new profile owned by the caller. Returns the new profile id. */
-export async function createProfile(metadataUri: string) {
+export async function createProfile(username: string, metadataUri: string) {
   const app = await appReady;
-  return (app as any).createProfile.tx(metadataUri);
+  return (app as any).createProfile.tx(username, metadataUri);
 }
 
 /** Update the metadata URI of a profile the caller owns. */
 export async function updateProfile(profileId: FixedSizeBinary<32>, metadataUri: string) {
   const app = await appReady;
   return (app as any).updateProfile.tx(profileId, metadataUri);
+}
+
+/** Rename a profile the caller owns. Reverts on-chain if the new username is taken. */
+export async function renameProfile(profileId: FixedSizeBinary<32>, newUsername: string) {
+  const app = await appReady;
+  return (app as any).renameProfile.tx(profileId, newUsername);
 }
 
 /** Post as `author` (a profile the caller owns) under each parent. */
